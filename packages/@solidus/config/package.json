@@ -1,0 +1,11 @@
+{
+  "name": "@solidus/config",
+  "version": "0.1.0",
+  "private": true,
+  "exports": {
+    "./tsconfig.json": "./tsconfig.base.json",
+    "./eslint": "./eslint.config.js",
+    "./vitest": "./vitest.shared.ts"
+  },
+  "files": ["tsconfig.base.json", "eslint.config.js", "vitest.shared.ts"]
+}
