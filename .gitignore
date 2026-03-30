@@ -5,3 +5,7 @@ dist/
 coverage/
 *.tsbuildinfo
 .turbo/
+
+# Internal planning docs
+apps/docs/
+docs/
