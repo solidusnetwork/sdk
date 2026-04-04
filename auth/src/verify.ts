@@ -7,7 +7,7 @@ export interface VerifiablePresentation {
   type: string[]
   /** DID of the presenter */
   holder: string
-  verifiableCredential?: unknown[]
+  verifiableCredential?: unknown[] | undefined
   proof: {
     type: string                  // e.g. 'Ed25519Signature2020'
     created: string               // ISO 8601

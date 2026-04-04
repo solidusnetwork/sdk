@@ -6,6 +6,7 @@ import type {
 import { didCreate, didResolve, didDeactivate } from './stub/did.js'
 import { credentialsIssue, credentialsVerify, credentialsRevoke, credentialsQuery } from './stub/credentials.js'
 import { getSql } from './stub/db.js'
+import { createChainClient, type ChainConfig } from './chain/index.js'
 
 export type {
   DID, DIDDocument, VerifiableCredential,
@@ -13,6 +14,7 @@ export type {
 }
 export { runMigrations, closeConnection } from './stub/db.js'
 export { generateKeypair, decodePublicKey } from './stub/crypto.js'
+export type { ChainConfig } from './chain/index.js'
 
 export interface SolidusSDK {
   did: {
@@ -32,7 +34,15 @@ export interface SolidusSDK {
   }
 }
 
-export function createSdk(_config: { mode: 'stub' | 'testnet' | 'mainnet' }): SolidusSDK {
+export interface SolidusConfig {
+  mode: 'stub' | 'testnet' | 'mainnet'
+  /** JSON-RPC URL for testnet/mainnet modes (default: http://127.0.0.1:9944) */
+  rpcUrl?: string
+  /** Hex-encoded Ed25519 private key for testnet/mainnet modes */
+  signerPrivateKey?: string
+}
+
+function createStubSdk(): SolidusSDK {
   return {
     did: {
       create: didCreate,
@@ -61,5 +71,24 @@ export function createSdk(_config: { mode: 'stub' | 'testnet' | 'mainnet' }): So
         return { valid: true, claims: {} }
       },
     },
+  }
+}
+
+export function createSdk(config: SolidusConfig): SolidusSDK {
+  const mode = config.mode ?? ((process.env['SOLIDUS_SDK_MODE'] as 'stub' | 'testnet' | 'mainnet' | undefined) ?? 'stub')
+
+  switch (mode) {
+    case 'testnet':
+    case 'mainnet': {
+      const rpcUrl = config.rpcUrl ?? process.env['SOLIDUS_RPC_URL'] ?? 'http://127.0.0.1:9944'
+      const signerKey = config.signerPrivateKey ?? process.env['SOLIDUS_SIGNER_KEY'] ?? ''
+      if (!signerKey) {
+        throw new Error('signerPrivateKey or SOLIDUS_SIGNER_KEY env var required for chain mode')
+      }
+      return createChainClient({ rpcUrl, signerPrivateKey: signerKey, network: mode })
+    }
+    case 'stub':
+    default:
+      return createStubSdk()
   }
 }
