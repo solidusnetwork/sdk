@@ -34,10 +34,34 @@ interface RpcDidDocument {
   controller: string
   verification_method: RpcVerificationMethod[]
   authentication: string[]
+  /** Added 2026-05-09. Optional for backward compat with documents
+   *  written before the chain stored the four extra W3C relationships. */
+  assertion_method?: string[]
+  key_agreement?: string[]
+  capability_invocation?: string[]
+  capability_delegation?: string[]
   service: unknown[]
   active: boolean
   created_ms: number
   updated_ms: number
+}
+
+/**
+ * W3C DID Resolution result — preserves the deactivated state separately
+ * from the document. Mirrors the shape defined in
+ * https://www.w3.org/TR/did-resolution/#did-resolution-result.
+ */
+export interface DIDResolutionResult {
+  didDocument: DIDDocument | null
+  didDocumentMetadata: {
+    deactivated?: boolean
+    created?: string
+    updated?: string
+  }
+  didResolutionMetadata: {
+    contentType: 'application/did+json'
+    error?: 'notFound' | 'invalidDid'
+  }
 }
 
 interface RpcReceipt {
@@ -83,6 +107,17 @@ function mapToW3CDIDDocument(doc: RpcDidDocument): DIDDocument {
     publicKeyMultibase: 'z' + bs58.encode(hexToBytes(vm.publicKeyHex)),
   }))
 
+  // Use chain-stored relationship arrays when present; for legacy
+  // documents (chain version < 2026-05-09) fall back to mirroring
+  // `authentication` for `assertionMethod`/`capabilityInvocation`/
+  // `capabilityDelegation` (the conservative W3C interpretation that
+  // matches how `build_did_document` populates these defaults today).
+  const authentication = doc.authentication
+  const assertionMethod = doc.assertion_method ?? doc.authentication
+  const capabilityInvocation = doc.capability_invocation ?? doc.authentication
+  const capabilityDelegation = doc.capability_delegation ?? doc.authentication
+  const keyAgreement = doc.key_agreement ?? []
+
   return {
     '@context': [
       'https://www.w3.org/ns/did/v1',
@@ -91,8 +126,11 @@ function mapToW3CDIDDocument(doc: RpcDidDocument): DIDDocument {
     id: doc.id,
     controller: doc.controller,
     verificationMethod,
-    authentication: doc.authentication,
-    assertionMethod: doc.authentication, // mirror authentication
+    authentication,
+    assertionMethod,
+    keyAgreement,
+    capabilityInvocation,
+    capabilityDelegation,
     created: new Date(doc.created_ms).toISOString(),
     updated: new Date(doc.updated_ms).toISOString(),
   }
@@ -149,10 +187,48 @@ export function createChainDid(rpc: RpcClient, config: ChainConfig) {
     },
 
     async resolve(did: string): Promise<DIDDocument | null> {
+      // BACKWARD COMPAT: returns null for deactivated DIDs. Use
+      // resolveWithMetadata() for spec-conformant resolution that
+      // distinguishes "not found" from "deactivated".
       const doc = await rpc.call<RpcDidDocument | null>('solidus_didResolve', [did])
       if (!doc) return null
       if (!doc.active) return null
       return mapToW3CDIDDocument(doc)
+    },
+
+    /**
+     * Spec-conformant W3C DID Resolution. Returns the full
+     * {@link DIDResolutionResult} including `didDocumentMetadata.deactivated`
+     * for tombstoned DIDs, instead of folding the deactivated state into
+     * a `null` document. Use this when interoperating with W3C DID Core
+     * tooling that distinguishes "not found" from "deactivated".
+     *
+     * @see https://www.w3.org/TR/did-resolution/#did-resolution-result
+     */
+    async resolveWithMetadata(did: string): Promise<DIDResolutionResult> {
+      const doc = await rpc.call<RpcDidDocument | null>('solidus_didResolve', [did])
+      if (!doc) {
+        return {
+          didDocument: null,
+          didDocumentMetadata: {},
+          didResolutionMetadata: {
+            contentType: 'application/did+json',
+            error: 'notFound',
+          },
+        }
+      }
+      const didDocument = mapToW3CDIDDocument(doc)
+      return {
+        didDocument,
+        didDocumentMetadata: {
+          deactivated: !doc.active,
+          created: new Date(doc.created_ms).toISOString(),
+          updated: new Date(doc.updated_ms).toISOString(),
+        },
+        didResolutionMetadata: {
+          contentType: 'application/did+json',
+        },
+      }
     },
 
     async deactivate(did: string, signerKey: string): Promise<void> {

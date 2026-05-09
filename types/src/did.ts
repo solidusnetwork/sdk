@@ -19,7 +19,16 @@ export interface DIDDocument {
   controller: string
   verificationMethod: VerificationMethod[]
   authentication: string[]
+  /** W3C DID Core §5.3.2 — verification methods authorised to issue assertions. */
   assertionMethod: string[]
+  /** W3C DID Core §5.3.3 — verification methods for ECDH key agreement.
+   *  Optional for backward compat with documents serialized before
+   *  2026-05-09; chain-stored documents now always carry this field. */
+  keyAgreement?: string[]
+  /** W3C DID Core §5.3.4 — verification methods authorised to invoke capabilities. */
+  capabilityInvocation?: string[]
+  /** W3C DID Core §5.3.5 — verification methods authorised to delegate capabilities. */
+  capabilityDelegation?: string[]
   created: string
   updated: string
 }
