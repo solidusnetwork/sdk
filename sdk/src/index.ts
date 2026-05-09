@@ -7,6 +7,11 @@ import { didCreate, didResolve, didDeactivate } from './stub/did.js'
 import { credentialsIssue, credentialsVerify, credentialsRevoke, credentialsQuery } from './stub/credentials.js'
 import { getSql } from './stub/db.js'
 import { createChainClient, type ChainConfig } from './chain/index.js'
+import type {
+  BbsDisclosedMessage,
+  BbsCredentialProofResult,
+  BbsCredentialRecord,
+} from './chain/bbs.js'
 
 export type {
   DID, DIDDocument, VerifiableCredential,
@@ -15,6 +20,12 @@ export type {
 export { runMigrations, closeConnection } from './stub/db.js'
 export { generateKeypair, decodePublicKey } from './stub/crypto.js'
 export type { ChainConfig } from './chain/index.js'
+export type {
+  BbsDisclosedMessage,
+  BbsCredentialProofResult,
+  BbsCredentialRecord,
+} from './chain/bbs.js'
+export { utf8ToHex, toHex } from './chain/bbs.js'
 
 export interface SolidusSDK {
   did: {
@@ -31,6 +42,35 @@ export interface SolidusSDK {
   auth: {
     createChallenge(domain: string): Promise<string>
     verifyPresentation(vp: string, challenge: string, domain: string): Promise<AuthResult>
+  }
+  /**
+   * BBS+ selective-disclosure operations. Available only in chain mode
+   * (testnet/mainnet) — `undefined` in stub mode.
+   */
+  bbs?: {
+    issueCredential(params: {
+      issuerPrivateKey: string
+      subjectDid: string
+      credentialType: string
+      payloadHash: Uint8Array
+      bbsPubkey: Uint8Array
+      bbsMessageCount: number
+    }): Promise<{ txHash: string; credentialId: string; receipt: unknown }>
+    verifyProof(params: {
+      proofHex: string
+      pubkeyHex: string
+      headerHex?: string
+      phHex?: string
+      disclosedMessages: BbsDisclosedMessage[]
+      totalMessageCount: number
+    }): Promise<boolean>
+    verifyCredentialProof(params: {
+      credentialId: string
+      proofHex: string
+      headerHex?: string
+      phHex?: string
+      disclosedMessages: BbsDisclosedMessage[]
+    }): Promise<BbsCredentialProofResult>
   }
 }
 

@@ -8,6 +8,7 @@ import { RpcClient } from './rpc.js'
 import { createChainDid } from './did.js'
 import { createChainCredentials } from './credentials.js'
 import { createChainAuth } from './auth.js'
+import { createChainBbs } from './bbs.js'
 import { getAddressFromKey } from './transaction.js'
 import type { SolidusSDK } from '../index.js'
 
@@ -28,5 +29,6 @@ export function createChainClient(config: ChainConfig): SolidusSDK {
     did: createChainDid(rpc, config),
     credentials: createChainCredentials(rpc, config),
     auth: createChainAuth(rpc, config),
+    bbs: createChainBbs(rpc, config),
   }
 }

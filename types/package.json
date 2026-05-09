@@ -1,7 +1,7 @@
 {
   "name": "@solidus/types",
   "version": "0.1.0",
-  "private": true,
+  "description": "TypeScript types for the Solidus Network protocol — DIDs, Verifiable Credentials, auth challenges, and verification results.",
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
@@ -11,6 +11,11 @@
       "types": "./dist/index.d.ts"
     }
   },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
   "scripts": {
     "build": "tsc",
     "typecheck": "tsc --noEmit"
@@ -18,5 +23,28 @@
   "devDependencies": {
     "@solidus/config": "workspace:*",
     "typescript": "^5.6.0"
+  },
+  "keywords": [
+    "solidus",
+    "did",
+    "verifiable-credentials",
+    "vc",
+    "decentralized-identity",
+    "types",
+    "typescript"
+  ],
+  "author": "Solidus Network (https://solidus.network)",
+  "license": "Apache-2.0",
+  "homepage": "https://solidus.network",
+  "bugs": {
+    "url": "https://github.com/solidusnetwork/sdk/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/solidusnetwork/sdk.git",
+    "directory": "types"
+  },
+  "publishConfig": {
+    "access": "public"
   }
 }

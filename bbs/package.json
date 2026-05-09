@@ -1,7 +1,7 @@
 {
-  "name": "@solidus/auth",
+  "name": "@solidus/bbs",
   "version": "0.1.0",
-  "description": "DID-based authentication for the Solidus Network protocol — Ed25519 challenge / signature / verification primitives.",
+  "description": "BBS+ selective-disclosure primitives for Solidus Network — IRTF draft-irtf-cfrg-bbs-signatures, BLS12-381 SHA-256 ciphersuite. Byte-compatible with the Solidus chain (zkryptium-backed).",
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
@@ -23,9 +23,7 @@
     "test:watch": "vitest"
   },
   "dependencies": {
-    "@solidus/types": "workspace:*",
-    "@noble/ed25519": "^2.1.0",
-    "@noble/hashes": "^1.5.0"
+    "@digitalbazaar/bbs-signatures": "^3.0.0"
   },
   "devDependencies": {
     "@solidus/config": "workspace:*",
@@ -35,12 +33,13 @@
   },
   "keywords": [
     "solidus",
-    "did",
-    "authentication",
-    "decentralized-identity",
-    "ed25519",
-    "challenge-response",
-    "signature"
+    "bbs",
+    "bbs+",
+    "selective-disclosure",
+    "verifiable-credentials",
+    "zero-knowledge",
+    "bls12-381",
+    "irtf"
   ],
   "author": "Solidus Network (https://solidus.network)",
   "license": "Apache-2.0",
@@ -51,7 +50,7 @@
   "repository": {
     "type": "git",
     "url": "git+https://github.com/solidusnetwork/sdk.git",
-    "directory": "auth"
+    "directory": "bbs"
   },
   "publishConfig": {
     "access": "public"
