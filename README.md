@@ -1,24 +1,33 @@
+<p align="center">
+  <img src="https://raw.githubusercontent.com/solidusnetwork/.github/main/profile/solidus_icon.png" alt="Solidus Network" height="80" />
+</p>
+
 # Solidus SDK
 
 [![License](https://img.shields.io/badge/license-Apache--2.0-blue)](https://github.com/solidusnetwork/sdk/blob/main/LICENSE)
 
-TypeScript packages for building on the [Solidus Network](https://solidus.network) — a blockchain protocol for decentralized identity and verifiable credentials.
+TypeScript packages for building on the [Solidus Network](https://solidus.network) — a
+blockchain protocol for decentralized identity and verifiable credentials.
 
 ## Published packages
 
-The three production packages are published to npm under the `@solidus-network` scope:
+Four production packages are published to npm under the `@solidus-network` scope (latest `0.3.0`):
 
 | Package | npm | Description |
 |---------|-----|-------------|
-| [`@solidus-network/sdk`](https://www.npmjs.com/package/@solidus-network/sdk) | [![npm](https://img.shields.io/npm/v/@solidus-network/sdk?label=&color=cb3837)](https://www.npmjs.com/package/@solidus-network/sdk) | Main SDK — DID resolution, credential issuance/verification, on-chain queries |
-| [`@solidus-network/auth`](https://www.npmjs.com/package/@solidus-network/auth) | [![npm](https://img.shields.io/npm/v/@solidus-network/auth?label=&color=cb3837)](https://www.npmjs.com/package/@solidus-network/auth) | DID-based authentication primitives — Ed25519 challenge / W3C VP verification |
-| [`@solidus-network/types`](https://www.npmjs.com/package/@solidus-network/types) | [![npm](https://img.shields.io/npm/v/@solidus-network/types?label=&color=cb3837)](https://www.npmjs.com/package/@solidus-network/types) | Shared TypeScript types — DIDs, Verifiable Credentials, auth challenges |
-| [`@solidus-network/bbs`](https://www.npmjs.com/package/@solidus-network/bbs) | [![npm](https://img.shields.io/npm/v/@solidus-network/bbs?label=&color=cb3837)](https://www.npmjs.com/package/@solidus-network/bbs) | BBS+ selective-disclosure primitives — IRTF draft-irtf-cfrg-bbs-signatures, BLS12-381 SHA-256, byte-compatible with the Solidus chain |
+| [`@solidus-network/sdk`](https://www.npmjs.com/package/@solidus-network/sdk) | [![npm](https://img.shields.io/npm/v/@solidus-network/sdk?label=&color=cb3837)](https://www.npmjs.com/package/@solidus-network/sdk) | Main SDK — DID resolution + rotation, credential issuance/verification, SD-JWT VC (incl. KB-JWT, status list, nested-path disclosure), on-chain queries |
+| [`@solidus-network/auth`](https://www.npmjs.com/package/@solidus-network/auth) | [![npm](https://img.shields.io/npm/v/@solidus-network/auth?label=&color=cb3837)](https://www.npmjs.com/package/@solidus-network/auth) | DID-based authentication primitives — Ed25519 challenge, W3C VP verification |
+| [`@solidus-network/types`](https://www.npmjs.com/package/@solidus-network/types) | [![npm](https://img.shields.io/npm/v/@solidus-network/types?label=&color=cb3837)](https://www.npmjs.com/package/@solidus-network/types) | Shared TypeScript types — DIDs, Verifiable Credentials (Data Model 2.0), auth challenges |
+| [`@solidus-network/bbs`](https://www.npmjs.com/package/@solidus-network/bbs) | [![npm](https://img.shields.io/npm/v/@solidus-network/bbs?label=&color=cb3837)](https://www.npmjs.com/package/@solidus-network/bbs) | BBS+ selective-disclosure primitives — `draft-irtf-cfrg-bbs-signatures`, BLS12-381 SHA-256, byte-compatible with the on-chain implementation |
 
 ## Install
 
 ```bash
-npm install @solidus-network/sdk @solidus-network/auth @solidus-network/types
+npm install \
+  @solidus-network/sdk \
+  @solidus-network/auth \
+  @solidus-network/types \
+  @solidus-network/bbs
 ```
 
 ## Quick start
@@ -35,21 +44,74 @@ const solidus = createSdk({
   },
 })
 
-// Resolve a DID
-const doc = await solidus.did.resolve('did:solidus:testnet:abc123')
+// Resolve a DID — returns the W3C resolution metadata shape
+const { didDocument, didDocumentMetadata } =
+  await solidus.did.resolveWithMetadata('did:solidus:testnet:abc123')
 
-// Issue a credential (as an authorized issuer)
+// Issue a W3C VC 2.0 credential (as an authorised issuer)
 const vc = await solidus.credentials.issue({
   subject: 'did:solidus:testnet:xyz789',
   type: ['VerifiableCredential', 'KYCVerified'],
   claims: { country: 'US', tier: 'standard' },
+  validFrom: new Date().toISOString(),
 })
-
-// Verify
-const result = await solidus.credentials.verify(vc.id)
 ```
 
-DID-based authentication, in three lines of server code:
+### SD-JWT VC (EUDI Wallet-aligned)
+
+```ts
+import { issueSdJwtVc, verifySdJwtVc, presentSdJwtVc } from '@solidus-network/sdk'
+
+const sdJwt = await issueSdJwtVc({
+  issuerPrivateKey,
+  issuerDid: 'did:solidus:testnet:issuer1',
+  vct: 'https://example.com/credentials/age',
+  claims: { given_name: 'Ada', birth_date: '1990-01-01' },
+  disclosable: ['birth_date'],
+  holderJwk,
+})
+
+// Holder presents only the necessary claim, key-binding included
+const presentation = await presentSdJwtVc({
+  sdJwt, claimsToReveal: ['birth_date'],
+  audience: 'https://verifier.example', nonce: 'abc',
+  holderPrivateKey,
+})
+
+const result = await verifySdJwtVc({
+  sdJwt: presentation,
+  expectedAudience: 'https://verifier.example',
+  expectedNonce: 'abc',
+  issuerResolver: createChainBackedIssuerResolverFromRpc(),
+})
+```
+
+### BBS+ selective disclosure
+
+```ts
+import { signBbs, deriveProofBbs, verifyProofBbs } from '@solidus-network/bbs'
+
+const signed = await signBbs({
+  issuerSecretKey,
+  messages: ['name=Ada', 'over18=true', 'birth_date=1990-01-01'],
+})
+
+// Holder discloses only "over18=true" — birth_date stays hidden
+const proof = await deriveProofBbs({
+  signature: signed,
+  messages: signed.messages,
+  reveal: [1], // index of "over18=true"
+  nonce: 'verifier-nonce',
+})
+
+const ok = await verifyProofBbs({
+  proof,
+  revealedMessages: { 1: 'over18=true' },
+  issuerPublicKey,
+})
+```
+
+### DID-based authentication
 
 ```ts
 import { createChallenge, verifyPresentation } from '@solidus-network/auth'
@@ -63,31 +125,21 @@ const result = await verifyPresentation({ presentation, challenge, getPublicKey 
 
 - **`stub`** — local Postgres-backed mock for development; no chain interaction.
 - **`testnet`** — talks to the Solidus testnet via JSON-RPC at `rpc.solidus.network`.
-- **`mainnet`** — reserved for the upcoming mainnet launch.
-
-## Other workspace packages
-
-Packages in this repo that are not yet published — kept here as the canonical source for the next release wave:
-
-| Package | Status | Description |
-|---------|--------|-------------|
-| `@solidus/jwt` | Internal | JWT utilities — sign/verify/decode with Ed25519 keys |
-| `@solidus/events` | Internal | RabbitMQ event bus client |
-| `@solidus/config` | Internal | Shared TypeScript / ESLint / Vitest config |
-| `@solidus/ui` | Stub | Shared React component primitives (planned) |
+- **`mainnet`** — reserved for the post-audit launch.
 
 ## Documentation
 
-- **SDK docs:** https://docs.solidus.network/sdk
-- **Guides:** https://docs.solidus.network/guides (Express, Next.js, KYC integration, webhooks)
-- **API reference:** https://docs.solidus.network/api
-- **Whitepaper:** https://github.com/solidusnetwork/docs/blob/main/whitepaper.md
+- **SDK docs:** <https://docs.solidus.network/sdk>
+- **Guides:** <https://docs.solidus.network/guides> (Express, Next.js, KYC integration, webhooks)
+- **API reference:** <https://docs.solidus.network/api>
+- **Whitepaper:** <https://docs.solidus.network/resources/whitepaper>
+- **`did:solidus` method spec:** <https://github.com/solidusnetwork/did-solidus-spec/blob/v0.1.0/SPEC.md>
 
 ## Network
 
-- **Testnet RPC:** `https://rpc.solidus.network`
-- **Explorer:** https://explorer.solidus.network
-- **Status:** https://solidus.network
+- **Testnet RPC:** <https://rpc.solidus.network>
+- **Explorer:** <https://explorer.solidus.network>
+- **Status:** <https://solidus.network>
 
 ## License
 
