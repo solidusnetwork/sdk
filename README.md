@@ -11,7 +11,9 @@ blockchain protocol for decentralized identity and verifiable credentials.
 
 ## Published packages
 
-Four production packages are published to npm under the `@solidus-network` scope (latest `0.3.0`):
+Published to npm under the `@solidus-network` scope. **Versions in the badges are live from the registry** — this page does not restate them, because a number typed into prose goes stale the day after you type it.
+
+### Core
 
 | Package | npm | Description |
 |---------|-----|-------------|
@@ -19,6 +21,28 @@ Four production packages are published to npm under the `@solidus-network` scope
 | [`@solidus-network/auth`](https://www.npmjs.com/package/@solidus-network/auth) | [![npm](https://img.shields.io/npm/v/@solidus-network/auth?label=&color=cb3837)](https://www.npmjs.com/package/@solidus-network/auth) | DID-based authentication primitives — Ed25519 challenge, W3C VP verification |
 | [`@solidus-network/types`](https://www.npmjs.com/package/@solidus-network/types) | [![npm](https://img.shields.io/npm/v/@solidus-network/types?label=&color=cb3837)](https://www.npmjs.com/package/@solidus-network/types) | Shared TypeScript types — DIDs, Verifiable Credentials (Data Model 2.0), auth challenges |
 | [`@solidus-network/bbs`](https://www.npmjs.com/package/@solidus-network/bbs) | [![npm](https://img.shields.io/npm/v/@solidus-network/bbs?label=&color=cb3837)](https://www.npmjs.com/package/@solidus-network/bbs) | BBS+ selective-disclosure primitives — `draft-irtf-cfrg-bbs-signatures`, BLS12-381 SHA-256, byte-compatible with the on-chain implementation |
+
+### Agent identity
+
+Portable identity for AI agents. Built on the core above; you do not need these to issue
+or verify human credentials. Source lives in the [Solidus monorepo](https://github.com/solidusnetwork), not this repo.
+
+| Package | npm | Description |
+|---------|-----|-------------|
+| [`@solidus-network/agent-identity`](https://www.npmjs.com/package/@solidus-network/agent-identity) | [![npm](https://img.shields.io/npm/v/@solidus-network/agent-identity?label=&color=cb3837)](https://www.npmjs.com/package/@solidus-network/agent-identity) | did:solidus DIDs, BBS+ selective-disclosure credentials, and ERC-8004 passport anchoring for AI agents |
+| [`@solidus-network/agent-identity-verify`](https://www.npmjs.com/package/@solidus-network/agent-identity-verify) | [![npm](https://img.shields.io/npm/v/@solidus-network/agent-identity-verify?label=&color=cb3837)](https://www.npmjs.com/package/@solidus-network/agent-identity-verify) | Hot-path verifier — offline BBS+ proof verification plus a cached, fail-closed OAuth Status List revocation check |
+| [`@solidus-network/agent-identity-react`](https://www.npmjs.com/package/@solidus-network/agent-identity-react) | [![npm](https://img.shields.io/npm/v/@solidus-network/agent-identity-react?label=&color=cb3837)](https://www.npmjs.com/package/@solidus-network/agent-identity-react) | React components — the Verified-by-Solidus badge, agent passport card, mandate-approval prompt |
+
+### ID capture
+
+Browser-side document capture, used by [Solidus Verify](https://verify.solidus.network).
+Source lives in the monorepo, not this repo.
+
+| Package | npm | Description |
+|---------|-----|-------------|
+| [`@solidus-network/capture`](https://www.npmjs.com/package/@solidus-network/capture) | [![npm](https://img.shields.io/npm/v/@solidus-network/capture?label=&color=cb3837)](https://www.npmjs.com/package/@solidus-network/capture) | Embeddable web ID-capture SDK — guided camera capture with quality gating and on-device MRZ/barcode extraction |
+| [`@solidus-network/id-extract`](https://www.npmjs.com/package/@solidus-network/id-extract) | [![npm](https://img.shields.io/npm/v/@solidus-network/id-extract?label=&color=cb3837)](https://www.npmjs.com/package/@solidus-network/id-extract) | Client-side (WASM) extraction — barcode read, MRZ OCR, checksum reconstruction, confidence gate. Framework-free |
+
 
 ## Install
 
