@@ -44,6 +44,17 @@ Source lives in the monorepo, not this repo.
 | [`@solidus-network/id-extract`](https://www.npmjs.com/package/@solidus-network/id-extract) | [![npm](https://img.shields.io/npm/v/@solidus-network/id-extract?label=&color=cb3837)](https://www.npmjs.com/package/@solidus-network/id-extract) | Client-side (WASM) extraction — barcode read, MRZ OCR, checksum reconstruction, confidence gate. Framework-free |
 
 
+### Wallet, agent runtime and tooling
+
+Source lives in the monorepo, not this repo.
+
+| Package | npm | Description |
+|---------|-----|-------------|
+| [`@solidus-network/wallet`](https://www.npmjs.com/package/@solidus-network/wallet) | [![npm](https://img.shields.io/npm/v/@solidus-network/wallet?label=&color=cb3837)](https://www.npmjs.com/package/@solidus-network/wallet) | Wallet SDK — did:solidus keypair derivation, injectable credential store, BBS+ selective-disclosure presentation, scoped payment-mandate stamping |
+| [`@solidus-network/mcp`](https://www.npmjs.com/package/@solidus-network/mcp) | [![npm](https://img.shields.io/npm/v/@solidus-network/mcp?label=&color=cb3837)](https://www.npmjs.com/package/@solidus-network/mcp) | MCP server — run-time agent tools: resolve did:solidus, verify credentials, check/create scoped spend mandates, authorize payments against them |
+| [`@solidus-network/auth-otp`](https://www.npmjs.com/package/@solidus-network/auth-otp) | [![npm](https://img.shields.io/npm/v/@solidus-network/auth-otp?label=&color=cb3837)](https://www.npmjs.com/package/@solidus-network/auth-otp) | Provider-agnostic OTP (SMS/email) login core — injected clock, rng, store, sender and identity resolver; the caller owns session issuance and delivery |
+| [`@solidus-network/cli`](https://www.npmjs.com/package/@solidus-network/cli) | [![npm](https://img.shields.io/npm/v/@solidus-network/cli?label=&color=cb3837)](https://www.npmjs.com/package/@solidus-network/cli) | CLI — wire did:solidus, verify and agent identity into your app in one command |
+
 ## Install
 
 ```bash
