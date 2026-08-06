@@ -70,79 +70,108 @@ npm install \
 ```ts
 import { createSdk } from '@solidus-network/sdk'
 
+// Config is flat — there is no `chain` wrapper.
 const solidus = createSdk({
   mode: 'testnet',
-  chain: {
-    rpcUrl: 'https://rpc.solidus.network',
-    network: 'testnet',
-    signerPrivateKey: process.env.SOLIDUS_SIGNER_KEY!,
-  },
+  rpcUrl: 'https://rpc.solidus.network',
+  signerPrivateKey: process.env.SOLIDUS_SIGNER_KEY,
 })
 
-// Resolve a DID — returns the W3C resolution metadata shape
-const { didDocument, didDocumentMetadata } =
-  await solidus.did.resolveWithMetadata('did:solidus:testnet:abc123')
+// Resolve a DID. Returns null when the DID is unknown or deactivated.
+const didDocument = await solidus.did.resolve('did:solidus:testnet:abc123')
+
+// Spec-conformant W3C DID Resolution — distinguishes "not found" from
+// "deactivated" instead of folding both into null. Chain mode only, so it is
+// optional on the SDK surface and `undefined` in stub mode. Guard it.
+if (solidus.did.resolveWithMetadata) {
+  const { didDocument, didDocumentMetadata } =
+    await solidus.did.resolveWithMetadata('did:solidus:testnet:abc123')
+}
 
 // Issue a W3C VC 2.0 credential (as an authorised issuer)
 const vc = await solidus.credentials.issue({
-  subject: 'did:solidus:testnet:xyz789',
+  subjectDid: 'did:solidus:testnet:xyz789',
+  issuerDid: 'did:solidus:testnet:issuer1',
+  issuerPrivateKey: process.env.SOLIDUS_ISSUER_KEY!,
   type: ['VerifiableCredential', 'KYCVerified'],
   claims: { country: 'US', tier: 'standard' },
-  validFrom: new Date().toISOString(),
+  expiresInDays: 365,
 })
 ```
 
 ### SD-JWT VC (EUDI Wallet-aligned)
 
 ```ts
-import { issueSdJwtVc, verifySdJwtVc, presentSdJwtVc } from '@solidus-network/sdk'
+import { issueSdJwtVc, presentSdJwtVc, verifySdJwtVc } from '@solidus-network/sdk'
 
-const sdJwt = await issueSdJwtVc({
-  issuerPrivateKey,
-  issuerDid: 'did:solidus:testnet:issuer1',
+// Ed25519 keys are raw bytes — Uint8Array, not hex strings and not JWKs.
+declare const issuerPrivateKey: Uint8Array, issuerPublicKey: Uint8Array
+declare const holderPrivateKey: Uint8Array, holderPublicKey: Uint8Array
+
+// Anything NOT listed in `disclosable` is always visible to the verifier, so
+// list every claim the holder should be able to withhold.
+const issued = await issueSdJwtVc({
+  issuer: 'did:solidus:testnet:issuer1',
   vct: 'https://example.com/credentials/age',
-  claims: { given_name: 'Ada', birth_date: '1990-01-01' },
-  disclosable: ['birth_date'],
-  holderJwk,
+  subject: { given_name: 'Ada', birth_date: '1990-01-01' },
+  disclosable: ['given_name', 'birth_date'],
+  issuerPrivateKey,
+  holderPublicKey, // binds the credential to this holder, enabling the KB-JWT
 })
 
-// Holder presents only the necessary claim, key-binding included
+// Holder reveals birth_date and withholds given_name. The Key-Binding JWT ties
+// that disclosure to one verifier and one nonce, so it cannot be replayed.
 const presentation = await presentSdJwtVc({
-  sdJwt, claimsToReveal: ['birth_date'],
-  audience: 'https://verifier.example', nonce: 'abc',
+  compact: issued.compact,
+  claimsToReveal: ['birth_date'],
+  audience: 'https://verifier.example',
+  nonce: 'abc',
   holderPrivateKey,
 })
 
+// The verifier supplies the issuer's public key itself — resolve it from the
+// issuer DID (`solidus.did.resolve`) and apply your own trust policy.
 const result = await verifySdJwtVc({
-  sdJwt: presentation,
+  compact: presentation.compact,
+  issuerPublicKey,
   expectedAudience: 'https://verifier.example',
   expectedNonce: 'abc',
-  issuerResolver: createChainBackedIssuerResolverFromRpc(),
 })
 ```
 
 ### BBS+ selective disclosure
 
+The API is class-based. Messages and headers are raw bytes; `utf8()` encodes them.
+
 ```ts
-import { signBbs, deriveProofBbs, verifyProofBbs } from '@solidus-network/bbs'
+import { BbsSecretKey, utf8 } from '@solidus-network/bbs'
 
-const signed = await signBbs({
-  issuerSecretKey,
-  messages: ['name=Ada', 'over18=true', 'birth_date=1990-01-01'],
+const messages = ['name=Ada', 'over18=true', 'birth_date=1990-01-01'].map(utf8)
+const header = utf8('solidus-kyc-v1')
+
+// Issuer signs the whole message set once
+const sk = await BbsSecretKey.generate()
+const pk = await sk.publicKey()
+const signature = await sk.sign(header, messages)
+
+// Holder discloses only "over18=true" (index 1) — the rest stay hidden.
+// The presentation header binds the proof to one verifier challenge.
+const presentationHeader = utf8('verifier-nonce')
+const proof = await signature.createProof({
+  pk,
+  header,
+  presentationHeader,
+  messages,
+  disclosedIndices: [1],
 })
 
-// Holder discloses only "over18=true" — birth_date stays hidden
-const proof = await deriveProofBbs({
-  signature: signed,
-  messages: signed.messages,
-  reveal: [1], // index of "over18=true"
-  nonce: 'verifier-nonce',
-})
-
-const ok = await verifyProofBbs({
-  proof,
-  revealedMessages: { 1: 'over18=true' },
-  issuerPublicKey,
+// The verifier never sees name or birth_date — only what was disclosed
+const ok = await proof.verify({
+  pk,
+  header,
+  presentationHeader,
+  disclosedIndices: [1],
+  disclosedMessages: [messages[1]],
 })
 ```
 
@@ -150,10 +179,19 @@ const ok = await verifyProofBbs({
 
 ```ts
 import { createChallenge, verifyPresentation } from '@solidus-network/auth'
+import type { VerifiablePresentation } from '@solidus-network/auth'
 
+// Holder DID, then a time-to-live in seconds
 const challenge = createChallenge('did:solidus:testnet:abc123', 300)
-// Client signs the challenge nonce and returns a Verifiable Presentation
-const result = await verifyPresentation({ presentation, challenge, getPublicKey })
+
+// The client signs challenge.nonce and returns a W3C Verifiable Presentation
+declare const presentation: VerifiablePresentation
+
+// Resolve the holder's Ed25519 public key from the VP's verificationMethod id
+declare const getPublicKey: (verificationMethodId: string) => Promise<Uint8Array>
+
+// Three positional arguments, in this order — not one options object
+const result = await verifyPresentation(challenge, presentation, getPublicKey)
 ```
 
 ## Modes
