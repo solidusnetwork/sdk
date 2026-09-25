@@ -55,6 +55,7 @@ Source lives in the monorepo, not this repo.
 | [`@solidus-network/auth-otp`](https://www.npmjs.com/package/@solidus-network/auth-otp) | [![npm](https://img.shields.io/npm/v/@solidus-network/auth-otp?label=&color=cb3837)](https://www.npmjs.com/package/@solidus-network/auth-otp) | Provider-agnostic OTP (SMS/email) login core — injected clock, rng, store, sender and identity resolver; the caller owns session issuance and delivery |
 | [`@solidus-network/cli`](https://www.npmjs.com/package/@solidus-network/cli) | [![npm](https://img.shields.io/npm/v/@solidus-network/cli?label=&color=cb3837)](https://www.npmjs.com/package/@solidus-network/cli) | CLI — wire did:solidus, verify and agent identity into your app in one command |
 | [`@solidus-network/x401`](https://www.npmjs.com/package/@solidus-network/x401) | [![npm](https://img.shields.io/npm/v/@solidus-network/x401?label=&color=cb3837)](https://www.npmjs.com/package/@solidus-network/x401) | x401 Verifier and agent sides — HTTP proof requirements, signed OpenID4VP request objects, Result Artifact validation, verification tokens, and the Digital Credentials API carrier |
+| [`@solidus-network/pay`](https://www.npmjs.com/package/@solidus-network/pay) | [![npm](https://img.shields.io/npm/v/@solidus-network/pay?label=&color=cb3837)](https://www.npmjs.com/package/@solidus-network/pay) | Non-custodial crypto and stablecoin checkout: invoices, payments, webhook verification and an embeddable checkout. Zero runtime dependencies. Testnet only today |
 
 ## Install
 
